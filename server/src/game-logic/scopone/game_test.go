@@ -1,9 +1,8 @@
 package scopone
 
 import (
-	"testing"
-
 	"go-scopone/src/game-logic/player"
+	"testing"
 )
 
 func TestAddPlayerToNewGameAndGameState(t *testing.T) {
@@ -81,4 +80,11 @@ func TestAddPlayerToNewGameAndGameState(t *testing.T) {
 	if e == nil {
 		t.Errorf("We should not be able to add twice the same player")
 	}
+
+	game.Suspend()
+	if game.State != GameSuspended {
+		t.Errorf("We should now be in a state of Suspended, but state is %v", game.State)
+	}
+
+	// game.
 }
