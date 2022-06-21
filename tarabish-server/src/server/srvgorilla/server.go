@@ -86,7 +86,7 @@ func (h *Hub) run() {
 }
 
 // ServeOsteria handles websocket requests from the Players that want to play in the Osteria.
-func serveOsteria(hub *Hub, scopone *tarabish.Tarabish, w http.ResponseWriter, r *http.Request) {
+func serveOsteria(hub *Hub, tarabish *tarabish.Tarabish, w http.ResponseWriter, r *http.Request) {
 	// just assume the origin is OK - security happiness
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
@@ -100,7 +100,7 @@ func serveOsteria(hub *Hub, scopone *tarabish.Tarabish, w http.ResponseWriter, r
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error { conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 
-	client := &client{hub: hub, conn: conn, send: make(chan []byte, 256), scopone: scopone}
+	client := &client{hub: hub, conn: conn, send: make(chan []byte, 256), tarabish: tarabish}
 
 	// Allow collection of memory referenced by the caller by doing all work in
 	// new goroutines.
@@ -118,10 +118,10 @@ func Start(playerStore tarabish.PlayerWriter, gameStore tarabish.GameReadWriter)
 	hub := newHub()
 	go hub.run()
 
-	scopone := tarabish.New(playerStore, gameStore)
+	tarabish := tarabish.New(playerStore, gameStore)
 
 	http.HandleFunc("/osteria", func(w http.ResponseWriter, r *http.Request) {
-		serveOsteria(hub, scopone, w, r)
+		serveOsteria(hub, tarabish, w, r)
 	})
 
 	err := http.ListenAndServe(*addr, nil)

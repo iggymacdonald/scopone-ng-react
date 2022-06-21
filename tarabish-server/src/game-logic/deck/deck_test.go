@@ -1,6 +1,7 @@
 package deck
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -104,3 +105,53 @@ func TestRemoveCards(t *testing.T) {
 		}
 	}
 }
+
+func TestNew(t *testing.T) {
+	expectedNumberOfCards := 36
+	deck := New()
+	if len(deck) != expectedNumberOfCards {
+		t.Errorf("Expected %v cards but found %v", expectedNumberOfCards, len(deck))
+	}
+	for i := 0; i < len(deck); i++ {
+		fmt.Printf("%s of %s :: ", deck[i].Type, deck[i].Suit)
+	}
+	// for card := deck {
+	// 	fmt.Println(card)
+	// }
+	// tests := []struct {
+	// 	name     string
+	// 	wantDeck Deck
+	// }{
+	// 	// TODO: Add test cases.
+	// }
+	// for _, tt := range tests {
+	// 	t.Run(tt.name, func(t *testing.T) {
+	// 		if gotDeck := New(); !reflect.DeepEqual(gotDeck, tt.wantDeck) {
+	// 			t.Errorf("New() = %v, want %v", gotDeck, tt.wantDeck)
+	// 		}
+	// 	})
+	// }
+}
+
+// func TestShuffle(t *testing.T) {
+// 	type args struct {
+// 		d Deck
+// 	}
+// 	tests := []struct {
+// 		name string
+// 		args args
+// 		want Deck
+// 	}{
+// 		// TODO: Add test cases.
+// 		{"Full",
+// 			args{New()},
+// 			New()},
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			if got := Shuffle(tt.args.d); !reflect.DeepEqual(got, tt.want) {
+// 				t.Errorf("Shuffle() = %v, want %v", got, tt.want)
+// 			}
+// 		})
+// 	}
+// }

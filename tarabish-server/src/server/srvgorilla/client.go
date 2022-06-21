@@ -19,9 +19,9 @@ import (
 
 // Client is a middleman between the websocket connection and the hub.
 type client struct {
-	name    string
-	scopone *tarabish.Tarabish
-	hub     *Hub
+	name     string
+	tarabish *tarabish.Tarabish
+	hub      *Hub
 	// The websocket connection.
 	conn *websocket.Conn
 	// Buffered channel of outbound messages.
@@ -55,7 +55,7 @@ func (c *client) readPump() {
 				if cName == "" {
 					cName = "Unknown client - the client did not register as client in the Osteria"
 				} else {
-					_, wasPlaying := c.scopone.RemovePlayer(cName)
+					_, wasPlaying := c.tarabish.RemovePlayer(cName)
 					if wasPlaying {
 						error := fmt.Sprintf("Error Because Player \"%v\" has been removed", cName)
 						sendPlayerLeftOsteria(c, cName, error)
@@ -79,7 +79,7 @@ func (c *client) readPump() {
 			switch msg.ID {
 			case "playerEntersOsteria":
 				playerName := msg.PlayerName
-				hv, alreadyIn := c.scopone.PlayerEnters(playerName)
+				hv, alreadyIn := c.tarabish.PlayerEnters(playerName)
 				if alreadyIn {
 					// Player is already in the osteria
 					response := server.NewMessageToOnePlayer(server.PlayerIsAlreadyInOsteria, playerName)
@@ -111,7 +111,7 @@ func (c *client) readPump() {
 				}
 			case "newGame":
 				gameName := msg.GameName
-				_, e := c.scopone.NewGame(gameName)
+				_, e := c.tarabish.NewGame(gameName)
 				if e != nil {
 					// There is already a game with the same name
 					response := server.NewMessageToOnePlayer(server.GameWithSameNamePresent, c.name)
@@ -129,7 +129,7 @@ func (c *client) readPump() {
 			case "addPlayerToGame":
 				playerName := msg.PlayerName
 				gameName := msg.GameName
-				e := c.scopone.AddPlayerToGame(playerName, gameName)
+				e := c.tarabish.AddPlayerToGame(playerName, gameName)
 				if e != nil {
 					response := server.NewMessageToOnePlayer(server.ErrorAddingPlayerToGameMsgID, playerName)
 					response.Error = e.Error()
@@ -146,7 +146,7 @@ func (c *client) readPump() {
 			case "addObserverToGame":
 				playerName := msg.PlayerName
 				gameName := msg.GameName
-				hv, err := c.scopone.AddObserverToGame(playerName, gameName)
+				hv, err := c.tarabish.AddObserverToGame(playerName, gameName)
 				if err != nil {
 					response := server.NewMessageToOnePlayer(server.ErrorAddingObserverToGameMsgID, playerName)
 					response.Error = err.Error()
@@ -159,14 +159,14 @@ func (c *client) readPump() {
 				} else {
 					respTo := fmt.Sprintf("addObserverToGame - game \"%v\"", gameName)
 					sendGames(c, respTo)
-					game := c.scopone.Games[gameName]
+					game := c.tarabish.Games[gameName]
 					sendObserverUpdates(c, hv, respTo, game)
 				}
 			case "newHand":
 				gameName := msg.GameName
-				game := c.scopone.Games[gameName]
+				game := c.tarabish.Games[gameName]
 				// _, handViewForPlayers, handCreated := game.NewHand()
-				_, handViewForPlayers, handCreated := c.scopone.NewHand(game)
+				_, handViewForPlayers, handCreated := c.tarabish.NewHand(game)
 				if handCreated {
 					respTo := fmt.Sprintf("newHand - game \"%v\"", gameName)
 					fmt.Println("NewHand", gameName, len(handViewForPlayers))
@@ -175,7 +175,7 @@ func (c *client) readPump() {
 					sendObserverUpdates(c, handViewForPlayers, respTo, game)
 				}
 			case "playCard":
-				handViewForPlayers, finalTableTake, g := c.scopone.Play(msg.PlayerName, msg.CardPlayed, msg.CardsTaken)
+				handViewForPlayers, finalTableTake, g := c.tarabish.Play(msg.PlayerName, msg.CardPlayed, msg.CardsTaken)
 				// if handViewForPlayers is nil it means something anomalous happened while playing the card and so
 				// there is no message sent to clients
 				if handViewForPlayers != nil {
@@ -186,7 +186,7 @@ func (c *client) readPump() {
 				}
 			case "closeGame":
 				gameName := msg.GameName
-				c.scopone.Close(gameName, c.name)
+				c.tarabish.Close(gameName, c.name)
 				respTo := fmt.Sprintf("Game \"%v\" closed", gameName)
 				sendGames(c, respTo)
 			default:
@@ -199,12 +199,12 @@ func (c *client) readPump() {
 }
 func sendPlayers(c *client, responseTo string) {
 	msg := server.NewMessageToAllClients(server.PlayersMsgID)
-	msg.Players = c.scopone.AllPlayers()
+	msg.Players = c.tarabish.AllPlayers()
 	msg.ResponseTo = responseTo
 	c.hub.broadcastMsg <- messageToAllAsJSON(msg)
 }
 func sendGames(c *client, responseTo string) {
-	allGames := c.scopone.AllGames()
+	allGames := c.tarabish.AllGames()
 	if len(allGames) > 0 {
 		msg := server.NewMessageToAllClients(server.GamesMsgID)
 		msg.Games = allGames
@@ -238,7 +238,7 @@ func sendPlayerViews(c *client, handViewForPlayers map[string]tarabish.HandPlaye
 			panic(panicMessage)
 		}
 
-		if c.scopone.Players[playerName].Status == player.PlayerPlaying || c.scopone.Players[playerName].Status == player.PlayerLookingAtHandResult {
+		if c.tarabish.Players[playerName].Status == player.PlayerPlaying || c.tarabish.Players[playerName].Status == player.PlayerLookingAtHandResult {
 			c.hub.clients[playerName].send <- msgHandViewJ
 		}
 	}

@@ -7,6 +7,7 @@ import (
 	"go-tarabish/src/game-logic/player"
 	"go-tarabish/src/game-logic/team"
 	"log"
+	"math/rand"
 	"sort"
 	"strconv"
 
@@ -17,7 +18,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Tarabish is a traditional italian card game usually played in the Osteria which is a traditional bar
+// Tarabish is a traditional italian card game usually played in the Tavern which is a traditional bar
 type Tarabish struct {
 	Players     map[string]*player.Player
 	Games       map[string]*Game
@@ -59,8 +60,8 @@ func New(playerStore PlayerWriter, gameStore GameReadWriter) *Tarabish {
 	return &s
 }
 
-// PlayerEnters creates a player if it was never in the Osteria, reactivate the player if it was inactive because
-// got disconnected and returns an error if the Player is already in the Osteria and is active
+// PlayerEnters creates a player if it was never in the Tavern, reactivate the player if it was inactive because
+// got disconnected and returns an error if the Player is already in the Tavern and is active
 func (s *Tarabish) PlayerEnters(pName string) (handViews map[string]HandPlayerView, alreadyIn bool) {
 	alreadyIn = false
 
@@ -81,12 +82,12 @@ func (s *Tarabish) PlayerEnters(pName string) (handViews map[string]HandPlayerVi
 		return
 	}
 
-	// there is already a player with this name in the Osteria
+	// there is already a player with this name in the Tavern
 	// check if the player is already playing a game or not
 	pStatus := plr.Status
 	switch pStatus {
 	case player.PlayerLeftOsteria:
-		fmt.Printf("Player %v returned to the Osteria\n", pName)
+		fmt.Printf("Player %v returned to the Tavern\n", pName)
 		err := s.PlayerStore.AddPlayerEntry(plr)
 		if err != nil {
 			panic(err)
@@ -95,7 +96,7 @@ func (s *Tarabish) PlayerEnters(pName string) (handViews map[string]HandPlayerVi
 		gameOfPlayer, pFound := findGameForPlayer(plr, s.Games)
 		_, oFound := findGameForObserver(plr.Name, s.Games)
 		if !pFound && !oFound {
-			// if the player was not in any game, then the player has just come back to the Osteria
+			// if the player was not in any game, then the player has just come back to the Tavern
 			plr.Status = player.PlayerNotPlaying
 			return
 		}
@@ -167,7 +168,7 @@ func findGameForObserver(observerName string, games map[string]*Game) (*Game, bo
 	return nil, false
 }
 
-// AllPlayers returns all the players in the Osteria
+// AllPlayers returns all the players in the Tavern
 func (s *Tarabish) AllPlayers() (allPlayers []*player.Player) {
 	allPlayers = make([]*player.Player, 0)
 	for pK := range s.Players {
@@ -186,7 +187,7 @@ func (s *Tarabish) AllPlayers() (allPlayers []*player.Player) {
 func (s *Tarabish) RemovePlayer(playerName string) (players map[string]*player.Player, wasPlaying bool) {
 	plr, found := s.Players[playerName]
 	if !found {
-		msg := fmt.Sprintf("We are trying to remove Player %v but the player is not in the Osteria", playerName)
+		msg := fmt.Sprintf("We are trying to remove Player %v but the player is not in the Tavern", playerName)
 		panic(msg)
 	}
 	if plr.Status == player.PlayerLeftOsteria {
@@ -210,7 +211,7 @@ func (s *Tarabish) RemovePlayer(playerName string) (players map[string]*player.P
 func (s *Tarabish) NewGame(gName string) (g *Game, e error) {
 	_, found := s.Games[gName]
 	if found {
-		e = fmt.Errorf("Game %v already present in the Osteria", gName)
+		e = fmt.Errorf("Game %v already present in the Tavern", gName)
 		return
 	}
 	game := NewGame()
@@ -269,7 +270,7 @@ func (s *Tarabish) AddObserverToGame(playerName string, gameName string) (handVi
 	return handViews, e
 }
 
-// AllGames returns all the games in the Osteria
+// AllGames returns all the games in the Tavern
 func (s *Tarabish) AllGames() (allGames []*Game) {
 	allGames = make([]*Game, 0)
 	for gK := range s.Games {
@@ -279,9 +280,12 @@ func (s *Tarabish) AllGames() (allGames []*Game) {
 	return
 }
 
-// NewHand creates a new hand and saves it in the store
+// NewHand creates a new hand and
+//  returns false if previous hand is active
+//  saves it in the store
 func (s *Tarabish) NewHand(g *Game) (hand Hand, handView map[string]HandPlayerView, handCreated bool) {
 	handCreated = true
+	// if previous hand is still active, return
 	if len(g.Hands) > 0 {
 		lastHand := g.Hands[len(g.Hands)-1]
 		if lastHand.State == HandActive {
@@ -289,27 +293,41 @@ func (s *Tarabish) NewHand(g *Game) (hand Hand, handView map[string]HandPlayerVi
 			return
 		}
 	}
+	// create a new Deck
 	newDeck := deck.New()
-	deck.Shuffle(newDeck)
+
+	// going to defer this for now
+	// shuffle deck
+	// fmt.Println("shuffling deck...")
+	// deck.Shuffle(newDeck)
+	// assign deck to new hand
 	hand.Deck = newDeck
+	// initialize table
 	hand.Table = make([]deck.Card, 0)
+	// initialize TeamScores
 	hand.Score = make(map[string]TeamScore)
 	if len(g.Hands) == 0 {
-		hand.FirstPlayer = g.Teams[0].Players[0]
+		hand.CurrentDealer = g.Teams[rand.Intn(2)].Players[rand.Intn(2)]
+		// hand.FirstPlayer = g.Teams[0].Players[0]
+		hand.FirstPlayer = playersSequence(g)[hand.CurrentDealer.Name]
 	} else {
 		lastHand := g.Hands[len(g.Hands)-1]
-		hand.FirstPlayer = playersSequence(g)[lastHand.FirstPlayer.Name]
+		hand.CurrentDealer = playersSequence(g)[lastHand.CurrentDealer.Name]
+		hand.FirstPlayer = playersSequence(g)[hand.CurrentDealer.Name]
 	}
 	hand.CurrentPlayer = hand.FirstPlayer
 	g.Hands = append(g.Hands, &hand)
-	// gives cards to the Players and initializes Scope and TakenCards
+	// gives cards to the Players and initializes Runs and TakenCards
+	fmt.Println("Dealer is", hand.CurrentDealer.Name)
 	for i := range g.Teams {
-		g.Teams[i].ScopeDiScopone = []deck.Card{}
+		g.Teams[i].Fifties = []deck.Card{}
+		g.Teams[i].Twenties = []deck.Card{}
 		g.Teams[i].TakenCards = []deck.Card{}
-		for j := range g.Teams[i].Players {
-			start := i*20 + j*10
-			g.Teams[i].Players[j].Cards = currentHand(g).Deck[start : start+10]
-		}
+		// going to defer this for now
+		// for j := range g.Teams[i].Players {
+		// 	start := i*20 + j*10
+		// 	g.Teams[i].Players[j].Cards = currentHand(g).Deck[start : start+10]
+		// }
 	}
 	hand.State = HandActive
 	hand.History = HandHistory{}
@@ -468,6 +486,49 @@ func (s *Tarabish) Close(gName string, playerClosing string) {
 	}
 }
 
+// Shuffle sends the request to the game to add one player
+func (s *Tarabish) Shuffle(playerName string, gameName string) (e error) {
+	g, gfound := s.Games[gameName]
+	if !gfound {
+		e = fmt.Errorf("There is no Game with name %v", gameName)
+		return
+	}
+	p, pfound := s.Players[playerName]
+	if !pfound {
+		e = fmt.Errorf("There is no Player with name %v", playerName)
+		return
+	}
+	if currentDealer(g).Name != p.Name {
+		// panic("The name of the player you want to deal is not the current dealer\n")
+		e = fmt.Errorf("The name of the player you want to deal is not the current dealer\n")
+		return // return false
+	}
+	deck.Shuffle(currentHand(g).Deck)
+	return e
+}
+
+// Shuffle will shuffle the current hand of the game
+// func (s *Tarabish) Shuffle(g *Game, playerDealing string) (isShuffled bool) {
+// 	isShuffled = true
+// 	if currentDealer(g).Name != playerDealing {
+// 		panic("The name of the player you want to deal is not the current dealer\n")
+// 		// return false
+// 	}
+// 	hand := currentHand(g)
+// 	if hand == nil {
+// 		return false
+// 	}
+// 	deck.Shuffle(hand.Deck)
+// 	// deck := hand.Deck
+// 	return isShuffled
+// 	// g := s.Games[gName]
+// 	// g.Close(playerClosing)
+// 	// err_ := s.GameStore.WriteGame(g)
+// 	// if err_ != nil {
+// 	// 	panic(err_)
+// 	// }
+// }
+
 // teamOfPlayer returns the teamOfPlayer of the Player
 func teamOfPlayer(pName string, g *Game) (t *team.Team, e error) {
 	for i := range g.Teams {
@@ -484,6 +545,11 @@ func teamOfPlayer(pName string, g *Game) (t *team.Team, e error) {
 // currentPlayer returns the player who has to play
 func currentPlayer(g *Game) *player.Player {
 	return currentHand(g).CurrentPlayer
+}
+
+// currentDealer returns the player who has to deal
+func currentDealer(g *Game) *player.Player {
+	return currentHand(g).CurrentDealer
 }
 
 // currentHand returns the hand which is currently played or nil if the game has no hands
@@ -621,13 +687,13 @@ func fillScoreCard(t *team.Team) (sc ScoreCard) {
 	// settebello
 	settebello := deck.Card{
 		Type: "Seven",
-		Suit: deck.Denari,
+		Suit: deck.Diamond,
 	}
 	_, found := deck.Find(d, settebello)
 	sc.Settebello = found
 
 	// denari
-	sc.Denari = sc.PrimieraSuits[deck.Denari]
+	sc.Denari = sc.PrimieraSuits[deck.Diamond]
 
 	// primiera
 	sc.PrimieraSuits = primieraSuits(t.TakenCards)
@@ -639,7 +705,7 @@ func fillScoreCard(t *team.Team) (sc ScoreCard) {
 	sc.Scope = t.ScopeDiScopone
 
 	// napoli
-	var orderedByNapoli byNapoli = cardsWithSuit(deck.Denari, d)
+	var orderedByNapoli byNapoli = cardsWithSuit(deck.Diamond, d)
 	sort.Sort(orderedByNapoli)
 	var napoli []deck.Card
 	for i, c := range orderedByNapoli {

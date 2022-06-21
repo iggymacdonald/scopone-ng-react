@@ -10,6 +10,8 @@ import (
 type Team struct {
 	Players        []*player.Player
 	TakenCards     []deck.Card
+	Fifties        []deck.Card
+	Twenties       []deck.Card
 	ScopeDiScopone []deck.Card
 }
 

@@ -8,9 +8,9 @@ RUN apk add git
 # RUN go build -o main ./...
 # CMD ["/app/main"]
 
-RUN mkdir /scopone-server
-ADD . /scopone-server/
-WORKDIR /scopone-server
+RUN mkdir /tarabish-server
+ADD . /tarabish-server/
+WORKDIR /tarabish-server
 RUN go mod download
-RUN go build -o scopone-server ./...
-CMD ["/scopone-server/server"]
+RUN go build -o tarabish-server ./...
+CMD ["/tarabish-server/server"]

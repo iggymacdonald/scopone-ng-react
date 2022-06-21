@@ -1,4 +1,4 @@
-# Scopone Go Server
+# Tarabish Go Server
 
 ## Node Modules
 node_modules and package.json are present only because the serverless framework in installed in this folder to speed up the

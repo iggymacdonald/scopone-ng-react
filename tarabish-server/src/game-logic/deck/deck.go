@@ -25,14 +25,14 @@ type Deck []Card
 
 // Types include Two, Three, Four, Five, Six
 // Seven, Eight, Nine, Ten, Jack, Queen, King & Ace
-var Types = []string{"Two", "Three", "Four", "Five", "Six", "Seven",
+var Types = []string{"Six", "Seven", "Eight", "Nine", "Ten", //"Two", "Three", "Four", "Five",
 	"Jack", "Queen", "King", "Ace"}
 
-// Denari is denari
-const Denari = "Denari"
+// Diamond is diamond
+const Diamond = "Diamond"
 
 // Suits include Heart, Diamond, Club & Spade
-var Suits = []string{Denari, "Bastoni", "Spade", "Coppe"}
+var Suits = []string{Diamond, "Heart", "Spade", "Club"}
 
 // New creates a deck of cards to be used
 func New() (deck Deck) {

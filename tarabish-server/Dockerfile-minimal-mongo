@@ -19,11 +19,11 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN go build -o scopone-app ./src/cmd/scopone-mongo
+RUN go build -o tarabish-app ./src/cmd/tarabish-mongo
 
 # Stage 1 - create minimal image with just the executable
 FROM alpine
-COPY --from=0 /build/scopone-app .
+COPY --from=0 /build/tarabish-app .
 COPY --from=0 /build/app.env .
 
 ENV MONGO_CONNECTION="mongoConnectionUrl"
@@ -32,7 +32,7 @@ ENV MONGO_CONNECTION="mongoConnectionUrl"
 # EXPOSE 8080
 
 # Command to run when starting the container
-CMD ["/scopone-app"]
+CMD ["/tarabish-app"]
 
 # FROM golang:alpine 
 # RUN apk add git
@@ -44,9 +44,9 @@ CMD ["/scopone-app"]
 # RUN go build -o main ./...
 # CMD ["/app/main"]
 
-# RUN mkdir /scopone-server
-# ADD . /scopone-server/
-# WORKDIR /scopone-server
+# RUN mkdir /tarabish-server
+# ADD . /tarabish-server/
+# WORKDIR /tarabish-server
 # RUN go mod download
-# RUN go build -o scopone-server ./...
-# CMD ["/scopone-server/server"]
+# RUN go build -o tarabish-server ./...
+# CMD ["/tarabish-server/server"]

@@ -77,7 +77,7 @@ func (store *Store) AddPlayerEntry(player *player.Player) error {
 type mgame struct {
 	Ts   time.Time
 	Game *tarabish.Game `bson:"game"`
-	// scopone.Game `bson:",inline"`  this is if I want to have game props at the same level as timestamp
+	// tarabish.Game `bson:",inline"`  this is if I want to have game props at the same level as timestamp
 }
 
 // WriteGame saves a game to mongo
@@ -94,6 +94,7 @@ func (store *Store) WriteGame(g *tarabish.Game) error {
 	_, err := collection.UpdateOne(context.TODO(), filter, update, opts)
 	return err
 }
+
 //WriteGame
 // ReadOpenGames reads from mongo all the games which are not closed
 func (store *Store) ReadOpenGames() (games map[string]*tarabish.Game, players map[string]*player.Player, err error) {
@@ -123,20 +124,20 @@ func (store *Store) ReadOpenGames() (games map[string]*tarabish.Game, players ma
 
 		g := elem.Game
 		games[elem.Game.Name] = g
-		// we need to add the players and the observers of any game restored from db to the scopone.Players mapp
+		// we need to add the players and the observers of any game restored from db to the tarabish.Players mapp
 		// moreover we need to make sure that the same intances of players are also stored in the game.Teams slice
 		gamePlayers := g.Players
 		for pK := range gamePlayers {
 			p := gamePlayers[pK]
 			p.Status = player.PlayerLeftOsteria
-			// set the players in the map returned - this map is going to be set into the scopone struct
+			// set the players in the map returned - this map is going to be set into the tarabish struct
 			players[p.Name] = p
 		}
 		gameObservers := g.Observers
 		for oK := range gameObservers {
 			o := gameObservers[oK]
 			o.Status = player.PlayerLeftOsteria
-			// set the observers in the map returned - this map is going to be set into the scopone struct
+			// set the observers in the map returned - this map is going to be set into the tarabish struct
 			players[o.Name] = o
 		}
 		// these 2 nested loops make sure that the same instance of players are shared in the Game.Players a d Game.Team

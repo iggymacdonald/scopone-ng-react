@@ -76,11 +76,12 @@ const (
 	HandClosed handState = "closed"
 )
 
-// Hand is an hand of a Scopone
+// Hand is an hand of a Tarabish Match
 type Hand struct {
 	Deck          deck.Deck `json:"-"`
 	State         handState `json:"state"`
 	Winner        team.Team
+	CurrentDealer *player.Player
 	FirstPlayer   *player.Player
 	CurrentPlayer *player.Player
 	Table         []deck.Card          `json:"-"`
@@ -196,17 +197,45 @@ type HandPlayerView struct {
 
 // ScoreCard organizes the cards to facilitate calculating the score of a Team
 type ScoreCard struct {
-	Settebello    bool                   `json:"settebello"`
-	Denari        []deck.Card            `json:"denari"`
+	// The point is won by whichever team takes the K and Q of trump by the same player, known as the 'the bells' .
+	Bella bool `json:"bella"`
+	// Last is awarded to the team that takes the last hand
+	Last bool `json:"last"`
+	// 50 points are awarded to a team that has 4 consecutive cards of the same suit - it is possible to have up to 2 fifties
+	Fifties []deck.Card `json:"fifties"`
+	// 50 points are awarded to a team that has 4 consecutive cards of the same suit - it is possible to have up to 2 fifties
+	Twenties []deck.Card `json:"twenties"`
+	// Cards are the slice of cards taken by one of the teams
+	Cards []deck.Card `json:"cards"`
+
+	// The point is won by whichever team takes more cards of the coins suit (or diamonds if you are using international cards). If they split 5-5 the point is not awarded.
+	Denari []deck.Card `json:"denari"`
+	// The point is won by whichever team takes the 7 of coins (diamonds), known as the 'sette bello' (beautiful seven).
+	Settebello bool `json:"settebello"`
+	//The point is won by the team with the best prime. In practice this is usually the team with more sevens,
+	//but the actual rule is as follows. A prime consists of one card of each suit, and the cards have special
+	//point values for this purpose, as shown in the table. The value of the prime is got by adding up the
+	//values of its cards and whichever team can construct the more valuable prime wins the point
 	PrimieraSuits map[string][]deck.Card `json:"primiera"`
-	Carte         []deck.Card            `json:"carte"`
-	Scope         []deck.Card            `json:"scope"`
-	Napoli        []deck.Card            `json:"napoli"`
+	// The Cards. The point is won by whichever team takes the majority of the cards. If they split 20-20 the point is not awarded
+	Carte []deck.Card `json:"carte"`
+	// sweeps - In addition to the points mentioned above, you also win a point for each sweep (Italian scopa).
+	// You score a sweep when you play a card which captures the all table cards, leaving the table empty.
+	// Traditionally, the capturing card is placed face up in the trick-pile of the capturing side,
+	// so that the number of sweeps made by each side can easily be seen when the scoring is done at the end of the play.
+	Scope []deck.Card `json:"scope"`
+	//Some play that a team that captures the ace, two and three of coins scores a number of points equal
+	// to the highest coin card they capture in unbroken sequence with these - for example if they took
+	// the A-2-3-4-5-6 of coins they would score 6 points (in addition to the point for coins).
+	// This bonus is called Napola or Napoli. A team that captures all ten cards of the coin suit wins
+	// the game outright. This is called Napoleone or Napolone or Cappotto
+	Napoli []deck.Card `json:"napoli"`
 }
 
 // TeamScore is a data struct containg info related to the score of a team in one hand
 type TeamScore struct {
 	ScoreCard     ScoreCard
+	BonusScore    int
 	PrimieraScore int
 	Score         int
 }
